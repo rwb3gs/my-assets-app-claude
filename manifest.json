@@ -1,0 +1,16 @@
+{
+  "name": "家庭資產戰情室",
+  "short_name": "戰情室",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "background_color": "#0a0f1e",
+  "theme_color": "#0a0f1e",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
