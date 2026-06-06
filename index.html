@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="戰情室"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="theme-color" content="#0a0f1e"/>
+  <title>家庭資產戰情室</title>
+
+  <!-- PWA 桌面圖標 (SVG 內嵌生成) -->
+  <link rel="apple-touch-icon" href="icon.png"/>
+  <link rel="icon" type="image/png" href="icon.png"/>
+
+  <style>
+    :root {
+      --bg:        #0a0f1e;
+      --surface:   #111827;
+      --border:    rgba(99,179,237,0.18);
+      --gold:      #f6c90e;
+      --gold2:     #e8a020;
+      --blue:      #63b3ed;
+      --green:     #48bb78;
+      --text:      #e2e8f0;
+      --muted:     #718096;
+      --danger:    #fc8181;
+      --radius:    16px;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'Helvetica Neue', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+      color: var(--text);
+    }
+
+    /* ══════════════════════
+       LOCK SCREEN
+    ══════════════════════ */
+    #lock-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    #lock-screen.hiding {
+      opacity: 0;
+      transform: scale(1.04);
+      pointer-events: none;
+    }
+
+    /* animated bg grid */
+    #lock-screen::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(99,179,237,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,179,237,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridMove 20s linear infinite;
+    }
+
+    @keyframes gridMove {
+      0%   { background-position: 0 0; }
+      100% { background-position: 40px 40px; }
+    }
+
+    /* glow orbs */
+    #lock-screen::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 30% 30%, rgba(99,179,237,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 75% 70%, rgba(246,201,14,0.05) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .lock-card {
+      position: relative;
+      z-index: 1;
+      width: min(340px, 90vw);
+      background: rgba(17,24,39,0.9);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2.4rem 2rem;
+      backdrop-filter: blur(20px);
+      box-shadow:
+        0 0 0 1px rgba(99,179,237,0.08),
+        0 24px 60px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      animation: cardIn 0.8s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    @keyframes cardIn {
+      from { opacity:0; transform: translateY(32px) scale(0.96); }
+      to   { opacity:1; transform: none; }
+    }
+
+    .lock-icon {
+      text-align: center;
+      margin-bottom: 0.6rem;
+    }
+
+    .lock-icon svg {
+      width: 52px; height: 52px;
+      filter: drop-shadow(0 0 12px rgba(246,201,14,0.4));
+      animation: iconPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes iconPulse {
+      0%,100% { filter: drop-shadow(0 0 8px rgba(246,201,14,0.3)); }
+      50%      { filter: drop-shadow(0 0 20px rgba(246,201,14,0.6)); }
+    }
+
+    .lock-title {
+      text-align: center;
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+
+    .lock-subtitle {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      margin-bottom: 1.8rem;
+    }
+
+    /* PIN dots */
+    .pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 1.6rem;
+    }
+
+    .pin-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--muted);
+      background: transparent;
+      transition: all 0.2s ease;
+    }
+
+    .pin-dot.filled {
+      background: var(--gold);
+      border-color: var(--gold);
+      box-shadow: 0 0 8px rgba(246,201,14,0.5);
+      transform: scale(1.1);
+    }
+
+    .pin-dot.error {
+      border-color: var(--danger);
+      background: var(--danger);
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%     { transform: translateX(-6px); }
+      40%     { transform: translateX(6px); }
+      60%     { transform: translateX(-4px); }
+      80%     { transform: translateX(4px); }
+    }
+
+    /* Numpad */
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .num-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 1.3rem;
+      font-weight: 300;
+      padding: 1rem 0;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      letter-spacing: 0.05em;
+      user-select: none;
+    }
+
+    .num-btn:active,
+    .num-btn.pressed {
+      background: rgba(99,179,237,0.12);
+      border-color: rgba(99,179,237,0.3);
+      transform: scale(0.94);
+    }
+
+    .num-btn.del-btn {
+      font-size: 1rem;
+      color: var(--muted);
+    }
+
+    .num-btn.empty-btn {
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+    }
+
+    .error-msg {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--danger);
+      margin-top: 1rem;
+      height: 1rem;
+      transition: opacity 0.3s;
+      letter-spacing: 0.05em;
+    }
+
+    /* ══════════════════════
+       DASHBOARD
+    ══════════════════════ */
+    #dashboard {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    #dashboard.visible {
+      display: flex;
+    }
+
+    /* top bar */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: env(safe-area-inset-top, 12px) 16px 10px;
+      background: rgba(10,15,30,0.95);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      backdrop-filter: blur(10px);
+    }
+
+    .top-bar-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--gold);
+    }
+
+    .top-bar-title svg {
+      width: 18px; height: 18px;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.65rem;
+      color: var(--green);
+      letter-spacing: 0.1em;
+    }
+
+    .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.3; }
+    }
+
+    .lock-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+
+    .lock-btn:active { opacity: 0.6; }
+
+    /* iframe container */
+    .iframe-wrap {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .iframe-wrap iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* loading overlay */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      transition: opacity 0.5s ease;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid rgba(99,179,237,0.15);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════
+     LOCK SCREEN
+═══════════════════════════ -->
+<div id="lock-screen">
+  <div class="lock-card">
+    <div class="lock-icon">
+      <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="22" width="32" height="24" rx="6" fill="#1a2535" stroke="#f6c90e" stroke-width="1.5"/>
+        <path d="M17 22V17a9 9 0 0 1 18 0v5" stroke="#f6c90e" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="26" cy="33" r="3.5" fill="#f6c90e"/>
+        <line x1="26" y1="36" x2="26" y2="41" stroke="#f6c90e" stroke-width="2" stroke-linecap="round"/>
+        <!-- small chart icon inside lock body -->
+        <path d="M18 40 L21 36 L24 38 L27 34" stroke="rgba(246,201,14,0.35)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="lock-title">家庭資產戰情室</div>
+    <div class="lock-subtitle">FAMILY ASSET COMMAND CENTER</div>
+
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+
+    <div class="numpad" id="numpad">
+      <button class="num-btn" data-n="1">1</button>
+      <button class="num-btn" data-n="2">2</button>
+      <button class="num-btn" data-n="3">3</button>
+      <button class="num-btn" data-n="4">4</button>
+      <button class="num-btn" data-n="5">5</button>
+      <button class="num-btn" data-n="6">6</button>
+      <button class="num-btn" data-n="7">7</button>
+      <button class="num-btn" data-n="8">8</button>
+      <button class="num-btn" data-n="9">9</button>
+      <button class="num-btn empty-btn" disabled></button>
+      <button class="num-btn" data-n="0">0</button>
+      <button class="num-btn del-btn" id="del-btn">⌫</button>
+    </div>
+
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════
+     DASHBOARD
+═══════════════════════════ -->
+<div id="dashboard">
+  <div class="top-bar">
+    <div class="top-bar-title">
+      <svg viewBox="0 0 18 18" fill="none">
+        <rect x="1" y="9" width="4" height="8" rx="1" fill="#f6c90e"/>
+        <rect x="7" y="5" width="4" height="12" rx="1" fill="#f6c90e" opacity="0.8"/>
+        <rect x="13" y="1" width="4" height="16" rx="1" fill="#f6c90e" opacity="0.6"/>
+      </svg>
+      家庭資產戰情室
+    </div>
+    <div class="top-bar-right">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        LIVE
+      </div>
+      <button class="lock-btn" id="lock-btn">🔒 鎖定</button>
+    </div>
+  </div>
+
+  <div class="iframe-wrap">
+    <div class="loading-overlay" id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text">載入戰情室中...</div>
+    </div>
+    <iframe
+      id="ds-frame"
+      src="about:blank"
+      allowfullscreen
+      sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+      title="家庭資產戰情室">
+    </iframe>
+  </div>
+</div>
+
+<script>
+  const CORRECT = '0125';
+  const DS_URL = 'https://datastudio.google.com/embed/reporting/a152befa-6590-4d9d-b58d-e2e1493b2c09/page/p_4qihgmd93d';
+
+  let pin = '';
+  const dots = [0,1,2,3].map(i => document.getElementById('d'+i));
+  const errorMsg = document.getElementById('error-msg');
+
+  function updateDots() {
+    dots.forEach((d, i) => {
+      d.classList.toggle('filled', i < pin.length);
+      d.classList.remove('error');
+    });
+  }
+
+  function triggerError() {
+    dots.forEach(d => { d.classList.remove('filled'); d.classList.add('error'); });
+    errorMsg.textContent = '密碼錯誤，請再試一次';
+    setTimeout(() => {
+      dots.forEach(d => d.classList.remove('error'));
+      errorMsg.textContent = '';
+      pin = '';
+      updateDots();
+    }, 1000);
+  }
+
+  function unlock() {
+    const lock = document.getElementById('lock-screen');
+    const dash = document.getElementById('dashboard');
+    lock.classList.add('hiding');
+    setTimeout(() => {
+      lock.style.display = 'none';
+      dash.classList.add('visible');
+      // load iframe after unlock
+      const frame = document.getElementById('ds-frame');
+      frame.src = DS_URL;
+      frame.onload = () => {
+        document.getElementById('loading').classList.add('hidden');
+      };
+      // fallback hide loading after 8s
+      setTimeout(() => document.getElementById('loading').classList.add('hidden'), 8000);
+    }, 600);
+  }
+
+  function handleInput(n) {
+    if (pin.length >= 4) return;
+    pin += n;
+    updateDots();
+    if (pin.length === 4) {
+      setTimeout(() => {
+        if (pin === CORRECT) { unlock(); }
+        else { triggerError(); }
+      }, 150);
+    }
+  }
+
+  function handleDel() {
+    pin = pin.slice(0, -1);
+    updateDots();
+    errorMsg.textContent = '';
+  }
+
+  // button clicks
+  document.querySelectorAll('.num-btn[data-n]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.add('pressed');
+      setTimeout(() => btn.classList.remove('pressed'), 150);
+      handleInput(btn.dataset.n);
+    });
+  });
+  document.getElementById('del-btn').addEventListener('click', handleDel);
+
+  // keyboard support
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('lock-screen').style.display === 'none') return;
+    if (e.key >= '0' && e.key <= '9') handleInput(e.key);
+    if (e.key === 'Backspace') handleDel();
+  });
+
+  // lock button
+  document.getElementById('lock-btn').addEventListener('click', () => {
+    pin = '';
+    updateDots();
+    const lock = document.getElementById('lock-screen');
+    const dash = document.getElementById('dashboard');
+    dash.classList.remove('visible');
+    lock.style.display = '';
+    lock.classList.remove('hiding');
+    document.getElementById('ds-frame').src = 'about:blank';
+    document.getElementById('loading').classList.remove('hidden');
+  });
+</script>
+</body>
+</html>
